@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yanık</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1208">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Yanık">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #faf7f2;
+    --card-bg: #ffffff;
+    --text-dark: #1a1208;
+    --text-mid: #5c4a2a;
+    --text-light: #9c855a;
+    --accent: #c8392b;
+    --accent-soft: #fdf0ee;
+    --gold: #c9922a;
+    --gold-soft: #fdf3e0;
+    --green: #2d7a4f;
+    --border: #e8dcc8;
+    --shadow: 0 4px 24px rgba(26,18,8,0.08);
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--text-dark); min-height:100vh; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:radial-gradient(circle at 20% 10%,rgba(201,146,42,.06) 0%,transparent 50%),
+               radial-gradient(circle at 80% 90%,rgba(200,57,43,.04) 0%,transparent 50%);
+    pointer-events:none; z-index:0;
+  }
+  .app { position:relative; z-index:1; max-width:480px; margin:0 auto; padding-bottom:90px; }
+
+  .header {
+    background:var(--card-bg); border-bottom:1px solid var(--border);
+    padding:18px 20px 14px; position:sticky; top:0; z-index:100;
+    box-shadow:0 2px 16px rgba(26,18,8,.06);
+  }
+  .header-top { display:flex; align-items:center; justify-content:space-between; }
+  .app-title { font-family:'Playfair Display',serif; font-size:26px; font-weight:900; }
+  .app-title span { color:var(--accent); }
+  .pot-badge {
+    background:var(--gold-soft); border:1.5px solid var(--gold);
+    border-radius:999px; padding:5px 14px;
+    font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--gold);
+  }
+  .header-meta { font-size:12px; color:var(--text-light); margin-top:4px; font-weight:500; }
+
+  .screen { display:none; padding:20px 14px 10px; }
+  .screen.active { display:block; }
+
+  .card {
+    background:var(--card-bg); border-radius:var(--radius);
+    border:1px solid var(--border); box-shadow:var(--shadow);
+    padding:22px 20px; margin-bottom:14px;
+  }
+  .card-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--text-dark); margin-bottom:16px; }
+
+  .count-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:20px; }
+  .count-btn {
+    background:var(--cream); border:2px solid var(--border); border-radius:var(--radius-sm);
+    padding:12px 4px; font-family:'Playfair Display',serif; font-size:22px; font-weight:700;
+    color:var(--text-mid); cursor:pointer; transition:all .2s; text-align:center;
+  }
+  .count-btn.selected { background:var(--text-dark); border-color:var(--text-dark); color:white; transform:scale(1.05); }
+
+  .player-inputs { display:flex; flex-direction:column; gap:10px; }
+  .player-row { display:flex; align-items:center; gap:10px; }
+  .pnum {
+    width:30px; height:30px; background:var(--gold-soft); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Playfair Display',serif; font-size:13px; font-weight:700; color:var(--gold); flex-shrink:0;
+  }
+  .p-input {
+    flex:1; background:var(--cream); border:1.5px solid var(--border);
+    border-radius:var(--radius-sm); padding:11px 14px;
+    font-family:'DM Sans',sans-serif; font-size:15px; color:var(--text-dark); outline:none; transition:border-color .2s;
+  }
+  .p-input:focus { border-color:var(--gold); background:white; }
+  .p-input::placeholder { color:var(--text-light); }
+
+  .setting-row {
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--gold-soft); border-radius:var(--radius-sm); padding:13px 16px; margin-top:14px;
+  }
+  .setting-label { font-size:13px; font-weight:600; color:var(--text-mid); }
+  .setting-val { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--gold); }
+  .ctrl-row { display:flex; gap:8px; align-items:center; }
+  .ctrl-btn {
+    width:32px; height:32px; background:var(--card-bg); border:1.5px solid var(--border);
+    border-radius:8px; font-size:18px; cursor:pointer; color:var(--text-dark);
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .ctrl-btn:active { transform:scale(.88); }
+
+  .btn-primary {
+    width:100%; background:var(--text-dark); color:white; border:none;
+    border-radius:var(--radius-sm); padding:15px;
+    font-family:'DM Sans',sans-serif; font-size:16px; font-weight:600;
+    cursor:pointer; transition:all .2s; margin-top:18px;
+  }
+  .btn-primary:active { transform:scale(.98); opacity:.9; }
+
+  .scoreboard { background:var(--card-bg); border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow); overflow:hidden; margin-bottom:14px; }
+  /* SCOREBOARD TABLE */
+  .scoreboard { overflow-x: auto; }
+  .sb-row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-row:last-child { border-bottom: none; }
+  .sb-header { background: var(--cream); position: sticky; top: 0; }
+  .sb-total { background: var(--cream); }
+  .sb-el-cell {
+    min-width: 36px; width: 36px;
+    padding: 10px 6px;
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    text-align: center; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+  }
+  .sb-cell {
+    flex: 1; min-width: 60px;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 14px; color: var(--text-dark);
+    border-right: 1px solid var(--border);
+  }
+  .sb-cell:last-child { border-right: none; }
+  .sb-name {
+    font-weight: 700; font-size: 13px;
+    color: var(--text-dark);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sb-total-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 700;
+  }
+  .sb-fire { color: var(--accent); font-weight: 700; }
+  .sb-out { opacity: 0.4; text-decoration: line-through; }
+  .sb-muted { color: var(--text-light); }
+  .sb-paid { font-size:11px; font-weight:600; color:var(--accent); margin-top:2px; }
+  .reenter-badge {
+    display:inline-block;
+    background:var(--accent);
+    color:white;
+    font-size:11px;
+    font-weight:700;
+    padding:1px 6px;
+    border-radius:5px;
+    margin-left:4px;
+    vertical-align:middle;
+  }
+
+  .score-row {
+    display:flex; align-items:center; padding:13px 18px;
+    border-bottom:1px solid var(--border); position:relative;
+  }
+  .score-row:last-child { border-bottom:none; }
+  .score-row.leader { background:var(--gold-soft); }
+  .score-row.danger { background:var(--accent-soft); }
+  .score-row.out { background:#f5f5f5; opacity:.45; }
+  .s-rank {
+    width:28px; height:28px; border-radius:50%; background:var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:var(--text-light); margin-right:11px; flex-shrink:0;
+  }
+  .score-row.leader .s-rank { background:var(--gold); color:white; }
+  .score-row.danger .s-rank { background:var(--accent); color:white; }
+  .s-info { flex:1; }
+  .s-name { font-size:15px; font-weight:600; }
+  .s-sub { font-size:11px; color:var(--text-light); margin-top:2px; }
+  .s-score { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--text-dark); }
+  .score-row.leader .s-score { color:var(--gold); }
+  .score-row.danger .s-score { color:var(--accent); }
+
+  .round-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:999px; padding:5px 13px; font-size:13px; font-weight:600;
+    color:var(--text-mid); margin-bottom:14px;
+  }
+  .rdot { width:6px; height:6px; background:var(--accent); border-radius:50%; }
+
+  .inp-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .inp-name { flex:1; font-size:14px; font-weight:500; color:var(--text-mid); }
+  .stepper {
+    width:36px; height:36px; background:var(--cream); border:1.5px solid var(--border);
+    border-radius:10px; font-size:20px; cursor:pointer; color:var(--text-dark);
+    display:flex; align-items:center; justify-content:center; transition:all .15s; user-select:none;
+  }
+  .stepper:active { transform:scale(.88); background:var(--border); }
+  .stepper-lg { min-width:44px; font-size:12px; font-weight:700; color:var(--text-mid); }
+  .inp-val {
+    font-family:'Playfair Display',serif; font-size:20px; font-weight:700;
+    color:var(--text-dark); width:54px; text-align:center;
+    background:var(--cream); border:1.5px solid var(--border);
+    border-radius:10px; padding:6px 2px; outline:none;
+  }
+
+  .actions { display:flex; gap:10px; margin-top:14px; }
+  .btn-sec {
+    flex:1; background:var(--cream); border:1.5px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px;
+    font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; color:var(--text-mid);
+    cursor:pointer; transition:all .2s;
+  }
+  .btn-sec:active { transform:scale(.97); }
+  .btn-ok {
+    flex:2; background:var(--green); border:none;
+    border-radius:var(--radius-sm); padding:12px;
+    font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; color:white;
+    cursor:pointer; transition:all .2s;
+  }
+  .btn-ok:active { transform:scale(.97); opacity:.9; }
+
+  /* MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(26,18,8,.6);
+    z-index:500; align-items:flex-end; justify-content:center;
+    backdrop-filter:blur(4px);
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--card-bg); border-radius:24px 24px 0 0;
+    width:100%; max-width:480px; padding:28px 22px 40px;
+    animation:slideUp .3s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-fire { font-size:56px; text-align:center; margin-bottom:10px; }
+  .modal-title { font-family:'Playfair Display',serif; font-size:24px; font-weight:900; text-align:center; margin-bottom:6px; color:var(--accent); }
+  .modal-sub { text-align:center; font-size:14px; color:var(--text-mid); margin-bottom:20px; }
+  .modal-pay {
+    background:var(--accent-soft); border-radius:var(--radius-sm); padding:16px 18px;
+    text-align:center; margin-bottom:20px; border:1px solid rgba(200,57,43,.15);
+  }
+  .modal-pay-label { font-size:12px; color:var(--accent); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-bottom:4px; }
+  .modal-pay-amount { font-family:'Playfair Display',serif; font-size:40px; font-weight:900; color:var(--accent); }
+  .modal-pay-unit { font-size:12px; color:var(--text-light); margin-top:2px; }
+  .modal-btns { display:flex; flex-direction:column; gap:10px; }
+  .btn-reenter {
+    background:var(--green); border:none; border-radius:var(--radius-sm); padding:16px;
+    font-family:'DM Sans',sans-serif; font-size:16px; font-weight:700; color:white; cursor:pointer;
+    transition:all .2s;
+  }
+  .btn-reenter:active { opacity:.88; transform:scale(.98); }
+  .btn-quit {
+    background:var(--cream); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:14px;
+    font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; color:var(--text-mid); cursor:pointer;
+    transition:all .2s;
+  }
+  .btn-quit:active { transform:scale(.98); }
+
+  /* HISTORY */
+  .hist-wrap { overflow-x:auto; }
+  .hist-table { width:100%; border-collapse:collapse; min-width:240px; }
+  .hist-table th { padding:9px 10px; font-size:11px; font-weight:700; color:var(--text-light); letter-spacing:.8px; text-transform:uppercase; background:var(--cream); border-bottom:1px solid var(--border); text-align:center; }
+  .hist-table th:first-child { text-align:left; }
+  .hist-table td { padding:9px 10px; font-size:13px; color:var(--text-dark); border-bottom:1px solid var(--border); text-align:center; }
+  .hist-table td:first-child { text-align:left; font-weight:600; color:var(--text-mid); }
+  .hist-table tr:last-child td { border-bottom:none; }
+  .td-fire { color:var(--accent); font-weight:700; }
+  .td-total { font-weight:700; background:var(--cream); }
+
+  /* WINNER */
+  .winner-wrap { text-align:center; padding:28px 16px; }
+  .trophy { font-size:72px; margin-bottom:16px; }
+  .w-title { font-family:'Playfair Display',serif; font-size:26px; font-weight:900; margin-bottom:6px; }
+  .w-name { font-family:'Playfair Display',serif; font-size:36px; font-weight:900; color:var(--gold); margin-bottom:8px; }
+  .pot-win {
+    display:inline-block; background:var(--gold-soft); border:2px solid var(--gold);
+    border-radius:999px; padding:10px 28px; margin-bottom:24px;
+    font-family:'Playfair Display',serif; font-size:24px; font-weight:900; color:var(--gold);
+  }
+  .final-list { background:var(--card-bg); border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; margin-bottom:20px; text-align:left; }
+  .final-row { display:flex; align-items:center; padding:12px 18px; border-bottom:1px solid var(--border); }
+  .final-row:last-child { border-bottom:none; }
+  .fpos { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; margin-right:12px; flex-shrink:0; }
+  .p1{background:#ffd700;color:#7a5c00} .p2{background:#c0c0c0;color:#555} .p3{background:#cd7f32;color:white} .px{background:var(--cream);color:var(--text-light)}
+
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--text-dark); color:white; padding:11px 20px; border-radius:999px;
+    font-size:14px; font-weight:500; transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index:999; white-space:nowrap; box-shadow:0 4px 20px rgba(0,0,0,.25);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  .bottom-nav {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:480px; background:var(--card-bg);
+    border-top:1px solid var(--border); display:flex;
+    padding:8px 0 20px; z-index:200;
+    box-shadow:0 -4px 20px rgba(26,18,8,.06);
+  }
+  .nav-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; cursor:pointer;
+    font-family:'DM Sans',sans-serif; font-size:10px; font-weight:600;
+    color:var(--text-light); padding:6px 0; transition:color .2s; letter-spacing:.3px;
+  }
+  .nav-btn.active { color:var(--accent); }
+  .nav-icon { font-size:20px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header" id="mainHeader" style="display:none">
+    <div class="header-top">
+      <div class="app-title">Yanık<span>♠</span></div>
+      
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+      <div class="header-meta" id="headerMeta"></div>
+      <button onclick="confirmReset()" style="background:none;border:none;font-size:12px;font-weight:600;color:var(--text-light);cursor:pointer;padding:2px 0;">🔄 Sıfırla</button>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="screen active" id="setupScreen">
+    <div style="padding-top:12px;margin-bottom:20px;">
+      <div style="font-family:'Playfair Display',serif;font-size:34px;font-weight:900;">Yanık<span style="color:var(--accent)">♠</span></div>
+      <div style="font-size:13px;color:var(--text-light);margin-top:4px;">Skor & Pot Takip</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Kaç kişi oynuyor?</div>
+      <div class="count-grid">
+        <button class="count-btn" onclick="setCount(2)">2</button>
+        <button class="count-btn selected" onclick="setCount(3)">3</button>
+        <button class="count-btn" onclick="setCount(4)">4</button>
+        <button class="count-btn" onclick="setCount(5)">5</button>
+        <button class="count-btn" onclick="setCount(6)">6</button>
+      </div>
+      <div class="card-title">Oyuncu İsimleri</div>
+      <div class="player-inputs" id="playerInputs"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Para Ayarı</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Başlangıç Katılım</div>
+          <div style="font-size:11px;color:var(--text-light);margin-top:3px;">Yanan: 2× · 4× · 8× ...</div>
+        </div>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" onclick="changeBase(-10)">−</button>
+          <div class="setting-val" id="baseVal">50</div>
+          <button class="ctrl-btn" onclick="changeBase(10)">+</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:10px;line-height:1.6;padding:0 2px;">
+        ₺ birimi gösterim amaçlıdır. İstediğin miktarı girebilirsin.
+      </div>
+    </div>
+    <button class="btn-primary" onclick="startGame()">🃏 Oyunu Başlat</button>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="gameScreen">
+    <div class="round-badge"><div class="rdot"></div><span id="roundLabel">El 1</span></div>
+    <div class="scoreboard" id="scoreboard"></div>
+    <div class="card">
+      <div class="card-title">Bu Elin Puanları</div>
+      <div id="scoreInputs"></div>
+      <div class="actions">
+        <button class="btn-sec" onclick="undoLast()">↩ Geri Al</button>
+        <button class="btn-ok" onclick="confirmRound()">✓ Eli Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="screen" id="historyScreen">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;">El Geçmişi</span>
+        <span id="histCount" style="font-size:12px;color:var(--text-light);font-weight:500;"></span>
+      </div>
+      <div class="hist-wrap"><div id="historyContent"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pot Özeti 🏦</div>
+      <div id="potSummary"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="screen" id="statsScreen">
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;">Geçmiş Oyunlar</span>
+        <button onclick="clearStats()" style="background:none;border:none;font-size:12px;color:var(--text-light);cursor:pointer;font-weight:600;">Temizle</button>
+      </div>
+      <div id="statsContent"></div>
+    </div>
+  </div>
+
+  <!-- WINNER -->
+  <div class="screen" id="winnerScreen">
+    <div class="winner-wrap">
+      <div class="trophy">🏆</div>
+      <div class="w-title">Oyun Bitti!</div>
+      <div class="w-name" id="wName"></div>
+      <div class="pot-win" id="wPot"></div>
+      <div class="final-list" id="finalList"></div>
+      <button class="btn-primary" onclick="resetGame()">🔄 Yeni Oyun</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="nav-btn active" id="navGame" onclick="showTab('game')"><span class="nav-icon">🃏</span>Oyun</button>
+  <button class="nav-btn" id="navHistory" onclick="showTab('history')"><span class="nav-icon">📋</span>Geçmiş</button>
+  <button class="nav-btn" id="navStats" onclick="showTab('stats')"><span class="nav-icon">📊</span>İstatistik</button>
+
+</div>
+
+<!-- BURN MODAL -->
+<div class="modal-overlay" id="burnModal">
+  <div class="modal">
+    <div class="modal-fire">🔥</div>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="modal-pay">
+      <div class="modal-pay-label">Tekrar girmek için öde</div>
+      <div class="modal-pay-amount" id="mAmount"></div>
+      <div class="modal-pay-unit">₺ · Pot'a eklenir</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-reenter" onclick="reenter()">💰 Ödüyorum, Devam Ediyorum!</button>
+      <button class="btn-quit" onclick="quitBurned()">❌ Çıkıyorum</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <div style="font-size:40px;text-align:center;margin-bottom:12px;">🔄</div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:900;text-align:center;margin-bottom:8px;">Emin misiniz?</div>
+    <div style="text-align:center;font-size:14px;color:var(--text-mid);margin-bottom:24px;">Oyun sıfırlanacak ve tüm veriler silinecek.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="doReset()" style="background:var(--accent);border:none;border-radius:var(--radius-sm);padding:15px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:white;cursor:pointer;">Evet, Sıfırla</button>
+      <button onclick="document.getElementById('resetModal').classList.remove('open')" style="background:var(--cream);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;color:var(--text-mid);cursor:pointer;">İptal</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let G = {
+  players: [],   // {name, score, burns, paid, active}
+  history: [],   // [{round, entries:[{idx,pts,burned}]}]
+  base: 50,
+  pot: 0,
+  round: 1,
+  burnQueue: [],
+  currentBurnIdx: -1
+};
+let playerCount = 3;
+let entries = [];
+
+function setCount(n) {
+  playerCount = n;
+  document.querySelectorAll('.count-btn').forEach(b=>b.classList.remove('selected'));
+  event.target.classList.add('selected');
+  renderInputs();
+}
+
+function renderInputs() {
+  const c = document.getElementById('playerInputs');
+  c.innerHTML = '';
+  for(let i=0;i<playerCount;i++) {
+    c.innerHTML += `<div class="player-row">
+      <div class="pnum">${i+1}</div>
+      <input class="p-input" id="pn${i}" placeholder="Oyuncu ${i+1}" maxlength="14">
+    </div>`;
+  }
+}
+
+function changeBase(d) {
+  G.base = Math.max(10, G.base+d);
+  document.getElementById('baseVal').textContent = G.base;
+}
+
+function startGame() {
+  G.players = []; G.pot = 0;
+  for(let i=0;i<playerCount;i++) {
+    const nm = (document.getElementById('pn'+i).value||'').trim() || `Oyuncu ${i+1}`;
+    G.players.push({name:nm, score:0, burns:0, paid:G.base, active:true});
+    G.pot += G.base;
+  }
+  G.history=[]; G.round=1; entries=new Array(playerCount).fill(0);
+  document.getElementById('setupScreen').classList.remove('active');
+  document.getElementById('gameScreen').classList.add('active');
+  document.getElementById('mainHeader').style.display='';
+  document.getElementById('bottomNav').style.display='flex';
+  updateHeader(); renderScoreboard(); renderRoundInputs();
+}
+
+function updateHeader() {
+  const alive = G.players.filter(p=>p.active).length;
+  document.getElementById('headerMeta').textContent =
+    `${G.players.length} oyuncu · ${alive} aktif · El ${G.round}`;
+}
+
+function renderScoreboard() {
+  // İsimler satırı
+  let nameRow = '<div class="sb-row sb-header">';
+  nameRow += '<div class="sb-el-cell"></div>'; // el kolonu boş
+  G.players.forEach(p => {
+    const isWarning = p.active && (p.score===99 || p.score===100);
+    const bb = p.burns>0?` <span class="reenter-badge">${p.reenterAt}</span>`:'';
+    const warn = isWarning ? ' ⚠️' : '';
+    const outCls = !p.active ? ' sb-out' : '';
+    nameRow += `<div class="sb-cell sb-name${outCls}">${p.name}${bb}${warn}<div class="sb-paid">${p.paid}₺</div></div>`;
+  });
+  nameRow += '</div>';
+
+  // El geçmişi satırları
+  let rows = '';
+  G.history.forEach(h => {
+    rows += '<div class="sb-row">';
+    rows += `<div class="sb-el-cell">${h.round}</div>`;
+    G.players.forEach((p,i) => {
+      const entry = h.entries.find(e=>e.idx===i);
+      if (!entry) { rows += '<div class="sb-cell sb-muted">—</div>'; return; }
+      const cls = entry.burned ? ' sb-fire' : '';
+      rows += `<div class="sb-cell${cls}">${entry.burned ? '🔥' : entry.pts}</div>`;
+    });
+    rows += '</div>';
+  });
+
+  // Toplam satırı
+  let totalRow = '<div class="sb-row sb-total">';
+  totalRow += '<div class="sb-el-cell">Top.</div>';
+  G.players.forEach(p => {
+    const isWarning = p.active && (p.score===99 || p.score===100);
+    const cls = !p.active ? ' sb-out' : isWarning ? ' sb-fire' : '';
+    totalRow += `<div class="sb-cell sb-total-val${cls}">${p.active ? p.score : '—'}</div>`;
+  });
+  totalRow += '</div>';
+
+  document.getElementById('scoreboard').innerHTML = nameRow + rows + totalRow;
+}
+
+function renderRoundInputs() {
+  document.getElementById('roundLabel').textContent = `El ${G.round}`;
+  entries = new Array(G.players.length).fill(0);
+  let html='';
+  G.players.forEach((p,i)=>{
+    if(!p.active) return;
+    html+=`<div class="inp-row">
+      <div class="inp-name">${p.name}</div>
+      <div class="stepper stepper-lg" onclick="adj(${i},-10)">−10</div>
+      <div class="stepper" onclick="adj(${i},-1)">−</div>
+      <input class="inp-val" id="e${i}" type="number" value="0" min="0" onchange="entries[${i}]=parseInt(this.value)||0">
+      <div class="stepper" onclick="adj(${i},1)">+</div>
+      <div class="stepper stepper-lg" onclick="adj(${i},10)">+10</div>
+    </div>`;
+  });
+  document.getElementById('scoreInputs').innerHTML = html;
+}
+
+function adj(i,d) {
+  entries[i]=Math.max(0,(entries[i]||0)+d);
+  const el=document.getElementById('e'+i);
+  if(el) el.value=entries[i];
+}
+
+function confirmRound() {
+  // Her oyuncunun bu eldeki puanını oku (index bazlı obje)
+  var pts = {};
+  G.players.forEach(function(p, i) {
+    var el = document.getElementById('e' + i);
+    pts[i] = el ? (parseInt(el.value) || 0) : 0;
+  });
+
+  // Hangi oyuncular bu el sonunda yanacak?
+  var willBurn = {};
+  G.players.forEach(function(p, i) {
+    if (!p.active) return;
+    if (p.score + pts[i] >= 101) willBurn[i] = true;
+  });
+
+  // Yanmayacak oyuncular arasında bu el sonundaki en yüksek puan
+  var safeMax = 0;
+  G.players.forEach(function(p, i) {
+    if (!p.active || willBurn[i]) return;
+    var s = p.score + pts[i];
+    if (s > safeMax) safeMax = s;
+  });
+  G.reenterScore = safeMax;
+
+  // Puanları uygula
+  var roundData = {round: G.round, entries: []};
+  var burnedIdxs = [];
+  G.players.forEach(function(p, i) {
+    if (!p.active) return;
+    p.score += pts[i];
+    var burned = p.score >= 101;
+    roundData.entries.push({idx: i, pts: pts[i], burned: burned});
+    if (burned) burnedIdxs.push(i);
+  });
+
+  G.history.push(roundData);
+  G.round++;
+
+  // 101 altında kaç kişi kaldı?
+  var stillAlive = G.players.filter(function(p) { return p.active && p.score < 101; });
+
+  if (stillAlive.length <= 1) {
+    // Oyun bitti, direkt kazananı göster
+    showWinner(stillAlive[0] || null);
+  } else {
+    // Oyun devam ediyor, yananları modal ile sor
+    if (burnedIdxs.length > 0) {
+      G.burnQueue = burnedIdxs.slice();
+      showNextBurn();
+    } else {
+      afterResolved();
+    }
+  }
+}
+
+function showNextBurn() {
+  if(G.burnQueue.length===0){ afterResolved(); return; }
+  G.currentBurnIdx=G.burnQueue.shift();
+  const p=G.players[G.currentBurnIdx];
+  // next payment: first burn = base*2, subsequent = last paid * 2
+  const nextPay = p.burns===0 ? G.base*2 : p.paid*2;
+  document.getElementById('mTitle').textContent=`${p.name} Yandı!`;
+  document.getElementById('mSub').textContent=`Toplam puanı ${p.score} oldu (101 veya üstü)`;
+  document.getElementById('mAmount').textContent=nextPay;
+  document.getElementById('burnModal').classList.add('open');
+}
+
+function reenter() {
+  const p=G.players[G.currentBurnIdx];
+  const nextPay=p.burns===0?G.base*2:p.paid*2;
+  const highestScore = G.reenterScore || 0;
+  G.pot+=nextPay; p.paid=nextPay; p.burns++; p.score=highestScore; p.reenterAt=highestScore;
+  document.getElementById('burnModal').classList.remove('open');
+  showToast(`${p.name} ${nextPay}₺ ödedi, ${highestScore} puanla devam!`);
+  showNextBurn();
+}
+
+function quitBurned() {
+  const p=G.players[G.currentBurnIdx];
+  p.active=false;
+  document.getElementById('burnModal').classList.remove('open');
+  showToast(`${p.name} oyundan çıktı`);
+  const stillAlive = G.players.filter(pl => pl.active && pl.score < 101);
+  if (stillAlive.length <= 1) {
+    afterResolved();
+    return;
+  }
+  showNextBurn();
+}
+
+function afterResolved() {
+  const stillAlive = G.players.filter(p => p.active && p.score < 101);
+  if (stillAlive.length <= 1) {
+    showWinner(stillAlive[0] || null);
+    return;
+  }
+  renderScoreboard(); renderRoundInputs(); updateHeader();
+}
+
+function undoLast() {
+  if(!G.history.length){ showToast('Geri alınacak el yok'); return; }
+  const last=G.history.pop();
+  last.entries.forEach(e=>{
+    const p=G.players[e.idx];
+    p.score=Math.max(0,p.score-e.pts);
+  });
+  G.round--;
+  renderScoreboard(); renderRoundInputs(); updateHeader();
+  showToast('Son el geri alındı');
+}
+
+function saveGameResult(winner) {
+  try {
+    const winnerId = winner ? G.players.indexOf(winner) : -1;
+    const totalPot = G.players.reduce((sum,p,i) => i !== winnerId ? sum + p.paid : sum, 0);
+    
+    // Mevcut kayıtları yükle
+    const saved = JSON.parse(localStorage.getItem('yanik_stats') || '{}');
+    // saved = { playerName: { wins, totalGain, totalLoss, games } }
+    
+    G.players.forEach((p, i) => {
+      if (!saved[p.name]) saved[p.name] = { wins:0, totalGain:0, totalLoss:0, games:0 };
+      saved[p.name].games++;
+      if (i === winnerId) {
+        saved[p.name].wins++;
+        saved[p.name].totalGain += totalPot;
+      } else {
+        saved[p.name].totalLoss += p.paid;
+      }
+    });
+    
+    // Oyun geçmişini kaydet
+    const gameLog = JSON.parse(localStorage.getItem('yanik_games') || '[]');
+    gameLog.unshift({
+      date: new Date().toLocaleDateString('tr-TR'),
+      time: new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'}),
+      winner: winner ? winner.name : '—',
+      players: G.players.map((p,i) => ({
+        name: p.name,
+        paid: p.paid,
+        gain: i === winnerId ? totalPot : -p.paid
+      }))
+    });
+    if (gameLog.length > 50) gameLog.pop(); // max 50 oyun
+    
+    localStorage.setItem('yanik_stats', JSON.stringify(saved));
+    localStorage.setItem('yanik_games', JSON.stringify(gameLog));
+  } catch(e) { console.error(e); }
+}
+
+function showWinner(winner) {
+  saveGameResult(winner);
+  showTab('winner');
+  document.getElementById('wName').textContent=winner?winner.name:'—';
+  document.getElementById('wPot').textContent=`🏆 Kazanan ${winner ? winner.name : '—'}`;
+  const sorted=[...G.players].sort((a,b)=>{
+    if(a.active&&!b.active) return -1;
+    if(!a.active&&b.active) return 1;
+    return a.score-b.score;
+  });
+  // Kazanan hariç herkesin ödediği toplam
+  const winnerId = winner ? G.players.indexOf(winner) : -1;
+  const totalPot = G.players.reduce((sum,p,i) => i !== winnerId ? sum + p.paid : sum, 0);
+  let html='';
+  sorted.forEach((p,i)=>{
+    const cls=i===0?'p1':i===1?'p2':i===2?'p3':'px';
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+    const scoreLabel=p.active?`${p.score} puan`:'Çıktı';
+    const isWinner = winner && p.name === winner.name;
+    const payLabel = isWinner ? `<span style="color:var(--green);font-weight:700;">+${totalPot}₺</span>` : `<span style="color:var(--accent);font-weight:700;">−${p.paid}₺</span>`;
+    html+=`<div class="final-row">
+      <div class="fpos ${cls}">${medal}</div>
+      <div style="flex:1;font-weight:600;font-size:15px;">${p.name}${p.burns>0?' 🔥×'+p.burns:''}</div>
+      <div style="font-size:12px;color:var(--text-light);margin-right:10px;">${scoreLabel}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:16px;">${payLabel}</div>
+    </div>`;
+  });
+  document.getElementById('finalList').innerHTML=html;
+}
+
+function renderStats() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('yanik_stats') || '{}');
+    const games = JSON.parse(localStorage.getItem('yanik_games') || '[]');
+    const el = document.getElementById('statsContent');
+    
+    if (!games.length) {
+      el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-light);font-size:14px;">Henüz oyun kaydedilmedi</div>';
+      return;
+    }
+
+    // Net kazanç/kayıp hesapla
+    const netBalance = {}; // { name: netAmount }
+    Object.entries(saved).forEach(([name, s]) => {
+      netBalance[name] = s.totalGain - s.totalLoss;
+    });
+
+    // Borç hesaplama algoritması: pozitif bakiyeli alacaklı, negatif borçlu
+    const balances = Object.entries(netBalance).map(([name, net]) => ({name, net}));
+    const creditors = balances.filter(p => p.net > 0).sort((a,b) => b.net - a.net);
+    const debtors = balances.filter(p => p.net < 0).sort((a,b) => a.net - b.net);
+    
+    const transactions = []; // [{from, to, amount}]
+    const cred = creditors.map(c => ({...c}));
+    const debt = debtors.map(d => ({...d}));
+    let ci = 0, di = 0;
+    while (ci < cred.length && di < debt.length) {
+      const amount = Math.min(cred[ci].net, -debt[di].net);
+      if (amount > 0) transactions.push({from: debt[di].name, to: cred[ci].name, amount});
+      cred[ci].net -= amount;
+      debt[di].net += amount;
+      if (Math.abs(cred[ci].net) < 1) ci++;
+      if (Math.abs(debt[di].net) < 1) di++;
+    }
+
+    // Toplam durum
+    const players = Object.entries(saved).sort((a,b) => (b[1].totalGain - b[1].totalLoss) - (a[1].totalGain - a[1].totalLoss));
+    let html = '<div style="padding:14px 16px;background:var(--gold-soft);border-bottom:1px solid var(--border);">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;">Toplam Durum</div>';
+    players.forEach(([name, s]) => {
+      const net = s.totalGain - s.totalLoss;
+      const netColor = net >= 0 ? 'var(--green)' : 'var(--accent)';
+      html += `<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+        <div style="flex:1;font-weight:600;font-size:14px;">${name}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-right:10px;">${s.wins}K / ${s.games}O</div>
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:${netColor};">${net>=0?'+':''}${net}₺</div>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Hesaplaşma tablosu
+    if (transactions.length > 0) {
+      html += '<div style="padding:14px 16px;background:var(--green-soft, #e8f5ee);border-bottom:1px solid var(--border);">';
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;">💸 Hesaplaşma</div>';
+      transactions.forEach(t => {
+        html += `<div style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+          <div style="flex:1;font-size:14px;font-weight:600;color:var(--accent);">${t.from}</div>
+          <div style="font-size:12px;color:var(--text-light);margin:0 8px;">→</div>
+          <div style="flex:1;font-size:14px;font-weight:600;color:var(--green);">${t.to}</div>
+          <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--text-dark);margin-left:8px;">${t.amount}₺</div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Oyun listesi
+    games.forEach((g, gi) => {
+      html += `<div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-weight:700;font-size:13px;">Oyun ${games.length - gi}</div>
+          <div style="font-size:11px;color:var(--text-light);">${g.date} ${g.time}</div>
+        </div>
+        <div style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:6px;">🏆 ${g.winner}</div>`;
+      g.players.forEach(p => {
+        const col = p.gain >= 0 ? 'var(--green)' : 'var(--accent)';
+        html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;">
+          <span style="color:var(--text-mid);">${p.name}</span>
+          <span style="font-weight:700;color:${col};">${p.gain>=0?'+':''}${p.gain}₺</span>
+        </div>`;
+      });
+      html += '</div>';
+    });
+
+    el.innerHTML = html;
+  } catch(e) {
+    document.getElementById('statsContent').innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-light);">Yüklenemedi</div>';
+  }
+}
+
+function clearStats() {
+  if (document.getElementById('resetModal')) {
+    // Özel confirm modal yok, basit kontrol
+  }
+  localStorage.removeItem('yanik_stats');
+  localStorage.removeItem('yanik_games');
+  renderStats();
+  showToast('İstatistikler temizlendi');
+}
+
+function renderHistory() {
+  document.getElementById('histCount').textContent=`${G.history.length} el`;
+  if(!G.history.length){
+    document.getElementById('historyContent').innerHTML='<div style="padding:24px;text-align:center;color:var(--text-light);font-size:14px;">Henüz el oynanmadı</div>';
+  } else {
+    let html=`<table class="hist-table"><thead><tr><th>El</th>`;
+    G.players.forEach(p=>html+=`<th>${p.name.slice(0,5)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    G.history.forEach(h=>{
+      html+=`<tr><td>${h.round}</td>`;
+      G.players.forEach((_,i)=>{
+        const e=h.entries.find(x=>x.idx===i);
+        if(!e){html+=`<td style="color:var(--text-light)">—</td>`;return;}
+        html+=`<td class="${e.burned?'td-fire':''}">${e.burned?'🔥':e.pts}</td>`;
+      });
+      html+=`</tr>`;
+    });
+    html+=`<tr class="td-total"><td>Top.</td>`;
+    G.players.forEach(p=>html+=`<td>${p.active?p.score:'—'}</td>`);
+    html+=`</tr></tbody></table>`;
+    document.getElementById('historyContent').innerHTML=html;
+  }
+
+  let pot=`<div style="display:flex;flex-direction:column;gap:6px;">`;
+  G.players.forEach(p=>{
+    pot+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:14px;font-weight:600;">${p.name}${p.burns>0?' 🔥×'+p.burns:''}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--accent);">${p.paid} ₺</div>
+    </div>`;
+  });
+  pot+=`</div>`;
+  document.getElementById('potSummary').innerHTML=pot;
+}
+
+function showTab(tab) {
+  ['game','history','winner'].forEach(t=>document.getElementById(t+'Screen').classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(tab+'Screen').classList.add('active');
+  const nb=document.getElementById('nav'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(nb) nb.classList.add('active');
+  if(tab==='history') renderHistory();
+  if(tab==='stats') renderStats();
+}
+
+function confirmReset() {
+  document.getElementById('resetModal').classList.add('open');
+}
+
+function doReset() {
+  document.getElementById('resetModal').classList.remove('open');
+  resetGame();
+}
+
+function resetGame() {
+  ['gameScreen','historyScreen','winnerScreen'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('setupScreen').classList.add('active');
+  document.getElementById('mainHeader').style.display='none';
+  document.getElementById('bottomNav').style.display='none';
+  renderInputs();
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+renderInputs();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+</script>
+</body>
+</html>

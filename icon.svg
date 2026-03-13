@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#1a1208"/>
+  <rect x="80" y="100" width="150" height="210" rx="18" fill="white" opacity="0.95"/>
+  <rect x="100" y="120" width="150" height="210" rx="18" fill="#faf7f2" stroke="#e8dcc8" stroke-width="3"/>
+  <text x="175" y="240" font-family="Georgia,serif" font-size="80" font-weight="bold" fill="#c8392b" text-anchor="middle">♠</text>
+  <text x="175" y="195" font-family="Georgia,serif" font-size="32" font-weight="bold" fill="#c8392b" text-anchor="middle">Y</text>
+  <!-- flame -->
+  <text x="340" y="310" font-size="130" text-anchor="middle">🔥</text>
+</svg>
